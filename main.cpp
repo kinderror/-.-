@@ -23,9 +23,11 @@ struct Particle {
     void wall() {
         if (x <= r or x >= 10 * a - r) {
             vx = -vx;
+            std::cout << "Wall" << std::endl;
         }
         if (y <= r or y >= 10 * a - r) {
             vy = -vy;
+            std::cout << "Wall" << std::endl;
         }
     }
     void motion() {
@@ -37,11 +39,21 @@ struct Particle {
 void calc_coll(Particle *p, Particle *m) {
     float xp = p->x, yp = p->y, vxp = p->vx, vyp = p->vy;
     float xm = m->x, ym = m->y, vxm = m->vx, vym = m->vy;
-    float cs = (xm - xp) / (2 * r), sn = (ym - yp) / (2 * r);
+    float R = pow((xm - xp) * (xm - xp) + (ym - yp) * (ym - yp), 0.5);
+    float cs = (xm - xp) / R, sn = (ym - yp) / R;
     p->vx = vxp * sn * sn + vxm * cs * cs + (vym - vyp) * cs * sn;
     p->vy = vyp * cs * cs + vym * sn * sn + (vxm - vxp) * cs * sn;
     m->vx = vxm * sn * sn + vxp * cs * cs + (vyp - vym) * cs * sn;
     m->vy = vym * cs * cs + vyp * sn * sn + (vxp - vxm) * cs * sn;
+    /*
+    std::cout << "Collision: " << p->index << " and " << m->index << std::endl;
+    float dx = xm - xp, dy = ym - yp;
+    std::cout << dx * dx + dy * dy << std::endl;
+    std::cout << cs << " " << sn << std::endl;
+    std::cout << xp << " " << yp << std::endl;
+    std::cout << xm << " " << ym << std::endl;
+    std::cout << " " << std::endl;
+    */
 }
 
 struct Cell {
@@ -83,22 +95,30 @@ struct Cell {
         outer = temp;
         outer_size++;
     }
-    bool intersect(int i, int j) {
-        float dx, dy;
+    bool intersect_inner(int i, int j) {
+        float dx, dy, dr;
         dx = inner[j]->x - inner[i]->x;
         dy = inner[j]->y - inner[i]->y;
-        return dx * dx + dy * dy <= r * r;
+        dr = pow(dx * dx + dy * dy, 0.5);
+        return (dr > 2 * r - 0.002 and dr < 2 * r);
+    }
+    bool intersect_outer(int i, int j) {
+        float dx, dy, dr;
+        dx = outer[j]->x - inner[i]->x;
+        dy = outer[j]->y - inner[i]->y;
+        dr = pow(dx * dx + dy * dy, 0.5);
+        return (dr > 2 * r - 0.002 and dr < 2 * r);
     }
     void colission() {
         for (int i = 0; i < inner_size; i++) {
             for (int j = i + 1; j < inner_size; j++) {
-                if (intersect(i, j)) {
+                if (intersect_inner(i, j)) {
                     calc_coll(inner[i], inner[j]);
                 }
             }
             for (int j = 0; j < outer_size; j++) {
-                if (intersect(i, j) and inner[i]->index < outer[j]->index) {
-                    calc_coll(inner[i], inner[j]);
+                if (intersect_outer(i, j) and inner[i]->index < outer[j]->index) {
+                    calc_coll(inner[i], outer[j]);
                 }
             }
         }
@@ -134,14 +154,14 @@ void inner_outer(Cell **cell_p, Particle *p) {
         if (cell_outer >= 0) (*cell_p[cell_outer]).push_outer(p);
     } else if (x >= x0 + 10 - r) {
         cell_outer = cell_inner + 1;
-        if (cell_outer <= a * a) (*cell_p[cell_outer]).push_outer(p);
+        if (cell_outer < a * a) (*cell_p[cell_outer]).push_outer(p);
     }
     if (y <= y0 + r) {
         cell_outer = cell_inner - a;
         if (cell_outer >= 0) (*cell_p[cell_outer]).push_outer(p);
     } else if (y >= y0 + 10 - r) {
         cell_outer = cell_inner + a;
-        if (cell_outer <= a * a) (*cell_p[cell_outer]).push_outer(p);
+        if (cell_outer < a * a) (*cell_p[cell_outer]).push_outer(p);
     }
     
     if (pow(x - x0, 2) + pow(y - y0, 2) <= r * r) {
@@ -149,10 +169,10 @@ void inner_outer(Cell **cell_p, Particle *p) {
         if (cell_outer >= 0) (*cell_p[cell_outer]).push_outer(p);
     } else if (pow(x - x0, 2) + pow(y - y0 - 10, 2) <= r * r) {
         cell_outer = cell_inner + a - 1;
-        if (cell_outer <= a * a) (*cell_p[cell_outer]).push_outer(p);
+        if (cell_outer < a * a) (*cell_p[cell_outer]).push_outer(p);
     } else if (pow(x - x0 - 10, 2) + pow(y - y0 - 10, 2) <= r * r) {
         cell_outer = cell_inner + a + 1;
-        if (cell_outer <= a * a) (*cell_p[cell_outer]).push_outer(p);
+        if (cell_outer < a * a) (*cell_p[cell_outer]).push_outer(p);
     } else if (pow(x - x0 - 10, 2) + pow(y - y0, 2) <= r * r) {
         cell_outer = cell_inner - a + 1;
         if (cell_outer >= 0) (*cell_p[cell_outer]).push_outer(p);
@@ -183,17 +203,21 @@ int main() {
     Particle **part_p = new Particle *[a * a];
     create(cell_p, part_p);
     iteration(cell_p, part_p);
-    float t = 0, vx, vy, v;
-    while (t < 10) {
+    float t = 0, vx, vy, v, sum = 0, sum1 = 0;
+    while (t < 100) {
         iteration(cell_p, part_p);
         t += delta;
     }
     for (int i = 0; i < a * a; i++) {
         vx = part_p[i]->vx;
         vy = part_p[i]->vy;
+        sum += vx * vx + vy * vy;
         v = pow(vx * vx + vy * vy, 0.5);
+        sum1 += v;
         std::cout << v << std::endl;
     }
+    std::cout << "Mean1: " << sum1 / (a * a) << std::endl;
+    std::cout << "Mean2: " << sum / (a * a) << std::endl;
     return 0;
 }
 
