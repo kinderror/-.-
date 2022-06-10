@@ -128,11 +128,17 @@ int main() {
     Cell **cell_p = new Cell *[a * a];
     Particle **part_p = new Particle *[a * a];
     create(cell_p, part_p);
-    for (int t = 0; t < 1; t += delta) {
+    iteration(cell_p, part_p);
+    float t = 0, vx, vy, v;
+    while (t < 10) {
         iteration(cell_p, part_p);
+        t += delta;
     }
     for (int i = 0; i < a * a; i++) {
-        std::cout << part_p[i]->vx << std::endl;
+        vx = part_p[i]->vx;
+        vy = part_p[i]->vy;
+        v = pow(vx * vx + vy * vy, 0.5);
+        std::cout << v << std::endl;
     }
     return 0;
 }
