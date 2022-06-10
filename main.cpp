@@ -44,6 +44,21 @@ struct Cell {
         inner = temp;
         size++;
     }
+    bool intersect(int i, int j) {
+        float dx, dy;
+        dx = inner[j]->x - inner[i]->x;
+        dy = inner[j]->y - inner[i]->y;
+        return dx * dx + dy * dy <= r * r;
+    }
+    void colission() {
+        for (int i = 0; i < size; i++) {
+            for (int j = i + 1; j < size; j++) {
+                if (intersect(i, j)) {
+                    calc_coll(inner[i], inner[j]);
+                }
+            }
+        }
+    }
 };
 
 struct Particle {
@@ -59,7 +74,18 @@ struct Particle {
         vx = val_vx;
         vy = val_vy;
     }
-    
+    void wall() {
+        if (x <= r or x >= 10 * a - r) {
+            vx = -vx;
+        }
+        if (y <= r or y >= 10 * a - r) {
+            vy = -vy;
+        }
+    }
+    void motion() {
+        x += vx * delta;
+        y += vy * delta;
+    }
 };
 
 // ......functions......
@@ -92,6 +118,24 @@ void iteration(Cell **cell_p, Particle **part_p) {
         cell_index = floor(x / 10) + a * floor(y / 10);
         (*cell_p[cell_index]).push(part_p[i]); 
     }
-    
+    for (int i = 0; i < a * a; i++) {
+        (*cell_p[i]).colission();
+    }
+    for (int i = 0; i < a * a; i++) {
+        (*part_p[i]).wall();
+    }
+    for (int i = 0; i < a * a; i++) {
+        (*part_p[i]).motion();
+    }
+}
+
+void calc_coll(Particle *p, Particle *m) {
+    float xp = p->x, yp = p->y, vxp = p->vx, vyp = p->vy;
+    float xm = m->x, ym = m->y, vxm = m->vx, vym = m->vy;
+    float cs = (xm - xp) / (2 * r), sn = (ym - yp) / (2 * r);
+    p->vx = vxp * sn * sn + vxm * cs * cs + (vym - vyp) * cs * sn;
+    p->vy = vyp * cs * cs + vym * sn * sn + (vxm - vxp) * cs * sn;
+    m->vx = vxm * sn * sn + vxp * cs * cs + (vyp - vym) * cs * sn;
+    m->vy = vym * cs * cs + vyp * sn * sn + (vxp - vxm) * cs * sn;
 }
 
