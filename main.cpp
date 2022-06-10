@@ -122,15 +122,46 @@ void create(Cell **cell_p, Particle **part_p) {
     }
 }
 
+void inner_outer(Cell **cell_p, Particle *p) {
+    int cell_inner, cell_outer;
+    float x = p->x, y = p->y, x0, y0;
+    cell_inner = floor(x / 10) + a * floor(y / 10);
+    (*cell_p[cell_inner]).push_inner(p);
+    x0 = 10 * (cell_inner % a);
+    y0 = 10 * (cell_inner / a);
+    if (x <= x0 + r) {
+        cell_outer = cell_inner - 1;
+        if (cell_outer >= 0) (*cell_p[cell_outer]).push_outer(p);
+    } else if (x >= x0 + 10 - r) {
+        cell_outer = cell_inner + 1;
+        if (cell_outer <= a * a) (*cell_p[cell_outer]).push_outer(p);
+    }
+    if (y <= y0 + r) {
+        cell_outer = cell_inner - a;
+        if (cell_outer >= 0) (*cell_p[cell_outer]).push_outer(p);
+    } else if (y >= y0 + 10 - r) {
+        cell_outer = cell_inner + a;
+        if (cell_outer <= a * a) (*cell_p[cell_outer]).push_outer(p);
+    }
+    
+    if (pow(x - x0, 2) + pow(y - y0, 2) <= r * r) {
+        cell_outer = cell_inner - a - 1;
+        if (cell_outer >= 0) (*cell_p[cell_outer]).push_outer(p);
+    } else if (pow(x - x0, 2) + pow(y - y0 - 10, 2) <= r * r) {
+        cell_outer = cell_inner + a - 1;
+        if (cell_outer <= a * a) (*cell_p[cell_outer]).push_outer(p);
+    } else if (pow(x - x0 - 10, 2) + pow(y - y0 - 10, 2) <= r * r) {
+        cell_outer = cell_inner + a + 1;
+        if (cell_outer <= a * a) (*cell_p[cell_outer]).push_outer(p);
+    } else if (pow(x - x0 - 10, 2) + pow(y - y0, 2) <= r * r) {
+        cell_outer = cell_inner - a + 1;
+        if (cell_outer >= 0) (*cell_p[cell_outer]).push_outer(p);
+    }
+}
+
 void iteration(Cell **cell_p, Particle **part_p) {
-    int cell_index;
-    float x, y;
     for (int i = 0; i < a * a; i++) {
-        x = part_p[i]->x;
-        y = part_p[i]->y;
-        cell_index = floor(x / 10) + a * floor(y / 10);
-        (*cell_p[cell_index]).push_inner(part_p[i]); 
-        if (x-)
+        inner_outer(cell_p, part_p[i]);
     }
     for (int i = 0; i < a * a; i++) {
         (*cell_p[i]).colission();
