@@ -45,26 +45,43 @@ void calc_coll(Particle *p, Particle *m) {
 }
 
 struct Cell {
-    int size;
+    int inner_size;
+    int outer_size;
     Particle **inner;
+    Particle **outer;
     Cell() {
-        size = 0;
+        inner_size = 0;
+        outer_size = 0;
         inner = new Particle *[0];
+        outer = new Particle *[0];
     }
     void clear() {
+        inner_size = 0;
+        outer_size = 0;
         delete [] inner;
+        delete [] outer;
         inner = new Particle *[0];
-        size = 0;
+        outer = new Particle *[0];
     }
-    void push(Particle *p) {
-        Particle **temp = new Particle *[size + 1];
-        for (int i = 0; i < size; i++) {
+    void push_inner(Particle *p) {
+        Particle **temp = new Particle *[inner_size + 1];
+        for (int i = 0; i < inner_size; i++) {
             temp[i] = inner[i];
         }
-        temp[size] = p;
+        temp[inner_size] = p;
         delete [] inner;
         inner = temp;
-        size++;
+        inner_size++;
+    }
+    void push_outer(Particle *p) {
+        Particle **temp = new Particle *[outer_size + 1];
+        for (int i = 0; i < outer_size; i++) {
+            temp[i] = outer[i];
+        }
+        temp[outer_size] = p;
+        delete [] outer;
+        outer = temp;
+        outer_size++;
     }
     bool intersect(int i, int j) {
         float dx, dy;
@@ -73,9 +90,14 @@ struct Cell {
         return dx * dx + dy * dy <= r * r;
     }
     void colission() {
-        for (int i = 0; i < size; i++) {
-            for (int j = i + 1; j < size; j++) {
+        for (int i = 0; i < inner_size; i++) {
+            for (int j = i + 1; j < inner_size; j++) {
                 if (intersect(i, j)) {
+                    calc_coll(inner[i], inner[j]);
+                }
+            }
+            for (int j = 0; j < outer_size; j++) {
+                if (intersect(i, j) and inner[i]->index < outer[j]->index) {
                     calc_coll(inner[i], inner[j]);
                 }
             }
@@ -107,7 +129,8 @@ void iteration(Cell **cell_p, Particle **part_p) {
         x = part_p[i]->x;
         y = part_p[i]->y;
         cell_index = floor(x / 10) + a * floor(y / 10);
-        (*cell_p[cell_index]).push(part_p[i]); 
+        (*cell_p[cell_index]).push_inner(part_p[i]); 
+        if (x-)
     }
     for (int i = 0; i < a * a; i++) {
         (*cell_p[i]).colission();
