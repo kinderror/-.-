@@ -23,11 +23,26 @@ int main() {
 
 // ......structures.......
 struct Cell {
+    int size
     Particle **inner;
-    Particle **outer;
     Cell() {
+        size = 0;
         inner = new Particle *[0];
-        outer = new Particle *[0];
+    }
+    void clear() {
+        delete [] inner;
+        inner = new Particle *[0];
+        size = 0;
+    }
+    void push(Particle *p) {
+        Particle **temp = new Particle *[size + 1];
+        for (int i = 0; i < size; i++) {
+            temp[i] = inner[i];
+        }
+        temp[size] = p;
+        delete [] inner;
+        inner = temp;
+        size++;
     }
 };
 
@@ -67,9 +82,16 @@ void create(Cell **cell_p, Particle **part_p) {
 
 void iteration(Cell **cell_p, Particle **part_p) {
     int cell_index;
+    float x, y;
     for (int i = 0; i < a * a; i++) {
-        cell_index = floor(x / 10) + a * floor(y / 10);
-        cell_p[cell_index] 
+        (*cell_p[i]).clear();
     }
+    for (int i = 0; i < a * a; i++) {
+        x = part_p[i]->x;
+        y = part_p[i]->y;
+        cell_index = floor(x / 10) + a * floor(y / 10);
+        (*cell_p[cell_index]).push(part_p[i]); 
+    }
+    
 }
 
