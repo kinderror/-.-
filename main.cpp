@@ -23,11 +23,9 @@ struct Particle {
     void wall() {
         if (x <= r or x >= 10 * a - r) {
             vx = -vx;
-            std::cout << "Wall" << std::endl;
         }
         if (y <= r or y >= 10 * a - r) {
             vy = -vy;
-            std::cout << "Wall" << std::endl;
         }
     }
     void motion() {
@@ -45,15 +43,6 @@ void calc_coll(Particle *p, Particle *m) {
     p->vy = vyp * cs * cs + vym * sn * sn + (vxm - vxp) * cs * sn;
     m->vx = vxm * sn * sn + vxp * cs * cs + (vyp - vym) * cs * sn;
     m->vy = vym * cs * cs + vyp * sn * sn + (vxp - vxm) * cs * sn;
-    /*
-    std::cout << "Collision: " << p->index << " and " << m->index << std::endl;
-    float dx = xm - xp, dy = ym - yp;
-    std::cout << dx * dx + dy * dy << std::endl;
-    std::cout << cs << " " << sn << std::endl;
-    std::cout << xp << " " << yp << std::endl;
-    std::cout << xm << " " << ym << std::endl;
-    std::cout << " " << std::endl;
-    */
 }
 
 struct Cell {
