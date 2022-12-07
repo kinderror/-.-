@@ -3,210 +3,179 @@
 #include <random>
 
 // ......const values......
-const float delta = 0.001;
-const int a = 10, r = 1, v_mean = 1;
+const float DELTA = 0.01;
+const int WIDTH = 400, HEIGHT = 40, RADIUS = 1, AMOUNT = 1000, COLUMNS = 200 + 1, INITIAL_VELOCITY = 1;
 
 // ......functions and structures......
-struct Particle {
-    int index;
-    float x;
-    float y;
-    float vx;
-    float vy;
-    Particle(int i, float val_x, float val_y, float val_vx, float val_vy) {
-        index = i;
-        x = val_x;
-        y = val_y;
-        vx = val_vx;
-        vy = val_vy;
-    }
-    void wall() {
-        if (x <= r or x >= 10 * a - r) {
+template<typename T>
+class Particle final 
+{
+private:
+    T x;
+    T y;
+    T vx;
+    T vy;
+public:
+    Particle(T x, T y, T vx, T vy):
+        x(x), y(y), vx(vx), vy(vy) {}
+    T get_vx() { return vx; }
+    T get_vy() { return vy; }
+    void wall() 
+    {
+        if (x < RADIUS or x > WIDTH - RADIUS) 
+        {
             vx = -vx;
         }
-        if (y <= r or y >= 10 * a - r) {
+        if (y < RADIUS or y > WIDTH - RADIUS) 
+        {
             vy = -vy;
         }
     }
-    void motion() {
-        x += vx * delta;
-        y += vy * delta;
+    void motion() 
+    {
+        x += vx * DELTA;
+        y += vy * DELTA;
+    }
+    void collision(Particle *particle)
+    {
+        T dx, dy, dr, dvx, dvy, cs, sn;
+        dx = particle->x - x;
+        dy = particle->y - y;
+        dr = pow(dx * dx + dy * dy, 0.5);
+        dvx = particle->vx - vx;
+        dvy = particle->vy - vy;
+        cs = dx / dr;
+        sn = dy / dr;
+        vx += dvx * cs * cs + dvy * cs * sn;
+        vy += dvx * cs * sn + dvy * sn * sn;
+        particle->vx -= dvx * cs * cs + dvy * cs * sn;
+        particle->vy -= dvx * cs * sn + dvy * sn * sn;
+    }
+    bool intersect(Particle *particle)
+    {
+        T dx, dy;
+        dx = particle->x - x;
+        dy = particle->y - y;
+        return dx * dx + dy * dy < 4 * RADIUS * RADIUS; 
     }
 };
 
-void calc_coll(Particle *p, Particle *m) {
-    float xp = p->x, yp = p->y, vxp = p->vx, vyp = p->vy;
-    float xm = m->x, ym = m->y, vxm = m->vx, vym = m->vy;
-    float R = pow((xm - xp) * (xm - xp) + (ym - yp) * (ym - yp), 0.5);
-    float cs = (xm - xp) / R, sn = (ym - yp) / R;
-    p->vx = vxp * sn * sn + vxm * cs * cs + (vym - vyp) * cs * sn;
-    p->vy = vyp * cs * cs + vym * sn * sn + (vxm - vxp) * cs * sn;
-    m->vx = vxm * sn * sn + vxp * cs * cs + (vyp - vym) * cs * sn;
-    m->vy = vym * cs * cs + vyp * sn * sn + (vxp - vxm) * cs * sn;
-}
-
-struct Cell {
-    int inner_size;
-    int outer_size;
-    Particle **inner;
-    Particle **outer;
-    Cell() {
-        inner_size = 0;
-        outer_size = 0;
-        inner = new Particle *[0];
-        outer = new Particle *[0];
+class Column final 
+{
+private:
+    Particle *interior;
+    size_t amount;
+public:
+    Column():
+        interior(new Particle [0]), amount(0) {}
+    ~Column() { delete [] interior; }
+    void clear() 
+    {
+        delete [] interior;
+        interior = new Particle [0];
+        amount = 0;
     }
-    void clear() {
-        inner_size = 0;
-        outer_size = 0;
-        delete [] inner;
-        delete [] outer;
-        inner = new Particle *[0];
-        outer = new Particle *[0];
-    }
-    void push_inner(Particle *p) {
-        Particle **temp = new Particle *[inner_size + 1];
-        for (int i = 0; i < inner_size; i++) {
-            temp[i] = inner[i];
+    void push(Particle *particle) 
+    {
+        Particle *temp = new Particle [amount];
+        for(int idx = 0; idx < amount; idx++) 
+        {
+            temp + idx = interior + idx;
         }
-        temp[inner_size] = p;
-        delete [] inner;
-        inner = temp;
-        inner_size++;
-    }
-    void push_outer(Particle *p) {
-        Particle **temp = new Particle *[outer_size + 1];
-        for (int i = 0; i < outer_size; i++) {
-            temp[i] = outer[i];
-        }
-        temp[outer_size] = p;
-        delete [] outer;
-        outer = temp;
-        outer_size++;
-    }
-    bool intersect_inner(int i, int j) {
-        float dx, dy, dr;
-        dx = inner[j]->x - inner[i]->x;
-        dy = inner[j]->y - inner[i]->y;
-        dr = pow(dx * dx + dy * dy, 0.5);
-        return (dr > 2 * r - 0.002 and dr < 2 * r);
-    }
-    bool intersect_outer(int i, int j) {
-        float dx, dy, dr;
-        dx = outer[j]->x - inner[i]->x;
-        dy = outer[j]->y - inner[i]->y;
-        dr = pow(dx * dx + dy * dy, 0.5);
-        return (dr > 2 * r - 0.002 and dr < 2 * r);
-    }
-    void colission() {
-        for (int i = 0; i < inner_size; i++) {
-            for (int j = i + 1; j < inner_size; j++) {
-                if (intersect_inner(i, j)) {
-                    calc_coll(inner[i], inner[j]);
+        temp + amount = particle;
+        delete [] interior;
+        interior = temp;
+        amount++;
+    } 
+    void colissions() 
+    {
+        for(int i = 0; i < amount; i++) 
+        {
+            for(int j = i + 1; j < amount; j++) 
+            {
+                if((interior + i)->intersect(interior + j)) 
+                {
+                    (interior + i)->collision(interior + j);
                 }
             }
-            for (int j = 0; j < outer_size; j++) {
-                if (intersect_outer(i, j) and inner[i]->index < outer[j]->index) {
-                    calc_coll(inner[i], outer[j]);
+            for(int j = 0; j < (this + 1)->amount; j++) 
+            {
+                if((interior + i)->intersect((this + 1)->interior + j)) 
+                {
+                    (interior + i)->collision((this + 1)->interior + j);
                 }
             }
         }
     }
 };
 
-void create(Cell **cell_p, Particle **part_p) {
-    float x, y, vx, vy;
+template<typename T>
+void create_gas(Column *columns, Particle *particles) 
+{
+    T x, y, vx, vy;
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dist(-v_mean, v_mean);
-    for (int i = 0; i < a * a; i++) {
-        Cell *p = new Cell();
-        cell_p[i] = p;
-        x = 10 * (1 + i % a) - 5;
-        y = 10 * (1 + i / a) - 5;
-        vx = dist(gen);
-        vy = pow(v_mean * v_mean - vx * vx, 0.5);
-        Particle *q = new Particle(i, x, y, vx, vy);
-        part_p[i] = q;
+    std::uniform_real_distribution<> dist(-INITIAL_VELOCITY, INITIAL_VELOCITY);
+    for(int i = 0; i < COLUMNS; i++) 
+    {
+        columns + i = Column();
+    }
+    for(int i = 0; i < WIDTH / 4; i++)
+    {
+        x = 2 + i * 4;
+        for(int j = 0; j < HEIGHT / 4; j++)
+        {
+            y = 2 + j * 4;
+            vx = dist(gen);
+            vy = pow(INITIAL_VELOCITY * INITIAL_VELOCITY - vx * vx, 0.5);
+            particles + idx = Particle(x, y, vx, vy);
+        }
+    }
+
+}
+
+template<typename T>
+void iteration(Column *columns, Particle *particles) 
+{
+    for(int i = 0; i < AMOUNT; i++)
+    {
+        (columns + (particles + i)->x / (2 * RADIUS))->push(particles + i);
+        (particles + i)->wall();
+    }
+    for(int i = 0; i < COLUMNS; i++) 
+    {
+        (columns + i)->collisions();
+        (columns + i)->clear();
+    }
+    for (int i = 0; i < AMOUNT; i++) {
+        (particles + i)->motion();
     }
 }
 
-void inner_outer(Cell **cell_p, Particle *p) {
-    int cell_inner, cell_outer;
-    float x = p->x, y = p->y, x0, y0;
-    cell_inner = floor(x / 10) + a * floor(y / 10);
-    (*cell_p[cell_inner]).push_inner(p);
-    x0 = 10 * (cell_inner % a);
-    y0 = 10 * (cell_inner / a);
-    if (x <= x0 + r) {
-        cell_outer = cell_inner - 1;
-        if (cell_outer >= 0) (*cell_p[cell_outer]).push_outer(p);
-    } else if (x >= x0 + 10 - r) {
-        cell_outer = cell_inner + 1;
-        if (cell_outer < a * a) (*cell_p[cell_outer]).push_outer(p);
+template<typename T>
+void run_simulation(Column *columns, Particle *particles, T period)
+{
+    create_gas<T>(columns, particles);
+    for(time = 0; time < period; time += DELTA)
+    {
+        iteration<T>(columns, particles);
     }
-    if (y <= y0 + r) {
-        cell_outer = cell_inner - a;
-        if (cell_outer >= 0) (*cell_p[cell_outer]).push_outer(p);
-    } else if (y >= y0 + 10 - r) {
-        cell_outer = cell_inner + a;
-        if (cell_outer < a * a) (*cell_p[cell_outer]).push_outer(p);
+    T v, sum = 0;
+    for(int i = 0; i < AMOUNT; i++)
+    {
+        v = pow((particles + i)->get_vx(), 2) +
+            pow((particles + i)->get_vy(), 2);
+        std::cout << pow(v, 0.5) << std::endl;
+        sum += v;
     }
-    
-    if (pow(x - x0, 2) + pow(y - y0, 2) <= r * r) {
-        cell_outer = cell_inner - a - 1;
-        if (cell_outer >= 0) (*cell_p[cell_outer]).push_outer(p);
-    } else if (pow(x - x0, 2) + pow(y - y0 - 10, 2) <= r * r) {
-        cell_outer = cell_inner + a - 1;
-        if (cell_outer < a * a) (*cell_p[cell_outer]).push_outer(p);
-    } else if (pow(x - x0 - 10, 2) + pow(y - y0 - 10, 2) <= r * r) {
-        cell_outer = cell_inner + a + 1;
-        if (cell_outer < a * a) (*cell_p[cell_outer]).push_outer(p);
-    } else if (pow(x - x0 - 10, 2) + pow(y - y0, 2) <= r * r) {
-        cell_outer = cell_inner - a + 1;
-        if (cell_outer >= 0) (*cell_p[cell_outer]).push_outer(p);
-    }
-}
-
-void iteration(Cell **cell_p, Particle **part_p) {
-    for (int i = 0; i < a * a; i++) {
-        inner_outer(cell_p, part_p[i]);
-    }
-    for (int i = 0; i < a * a; i++) {
-        (*cell_p[i]).colission();
-    }
-    for (int i = 0; i < a * a; i++) {
-        (*part_p[i]).wall();
-    }
-    for (int i = 0; i < a * a; i++) {
-        (*part_p[i]).motion();
-    }
-    for (int i = 0; i < a * a; i++) {
-        (*cell_p[i]).clear();
-    }
+    std::cout << "Mean: " << sum / AMOUNT << std::endl;
 }
 
 // ......main......
 int main() {
-    Cell **cell_p = new Cell *[a * a];
-    Particle **part_p = new Particle *[a * a];
-    create(cell_p, part_p);
-    iteration(cell_p, part_p);
-    float t = 0, vx, vy, v, sum = 0, sum1 = 0;
-    while (t < 100) {
-        iteration(cell_p, part_p);
-        t += delta;
-    }
-    for (int i = 0; i < a * a; i++) {
-        vx = part_p[i]->vx;
-        vy = part_p[i]->vy;
-        sum += vx * vx + vy * vy;
-        v = pow(vx * vx + vy * vy, 0.5);
-        sum1 += v;
-        std::cout << v << std::endl;
-    }
-    std::cout << "Mean1: " << sum1 / (a * a) << std::endl;
-    std::cout << "Mean2: " << sum / (a * a) << std::endl;
+    Column *columns = new Column [COLUMNS];
+    Particle *particles = new Particle [AMOUNT];
+    run_simulation<float>(columns, particles);
     return 0;
 }
 
