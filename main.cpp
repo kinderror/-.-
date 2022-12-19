@@ -1,25 +1,25 @@
 #include <iostream>
 #include <cmath>
 #include <random>
+#include <vector>
 
 // ......const values......
-const float DELTA = 0.01;
-const int WIDTH = 400, HEIGHT = 40, RADIUS = 1, AMOUNT = 1000, COLUMNS = 200 + 1, INITIAL_VELOCITY = 1;
+static const float DELTA = 0.01;
+static const int WIDTH = 400, HEIGHT = 40, RADIUS = 1, AMOUNT = 1000, COLUMNS = 200 + 1, INITIAL_VELOCITY = 1;
 
 // ......functions and structures......
 template<typename T>
 class Particle final 
 {
 private:
-    T x;
-    T y;
-    T vx;
-    T vy;
+    T x, y, vx, vy;
 public:
-    Particle(T x, T y, T vx, T vy):
+    Particle(T x = 0, T y = 0, T vx = 0, T vy = 0):
         x(x), y(y), vx(vx), vy(vy) {}
-    T get_vx() { return vx; }
-    T get_vy() { return vy; }
+    T get_x() const { return x; }
+    T get_y() const { return y; }
+    T get_vx() const { return vx; }
+    T get_vy() const { return vy; }
     void wall() 
     {
         if (x < RADIUS or x > WIDTH - RADIUS) 
@@ -38,6 +38,7 @@ public:
     }
     void collision(Particle *particle)
     {
+        if(not intersect(particle)) return;
         T dx, dy, dr, dvx, dvy, cs, sn;
         dx = particle->x - x;
         dy = particle->y - y;
@@ -51,7 +52,7 @@ public:
         particle->vx -= dvx * cs * cs + dvy * cs * sn;
         particle->vy -= dvx * cs * sn + dvy * sn * sn;
     }
-    bool intersect(Particle *particle)
+    bool intersect(Particle *particle) const
     {
         T dx, dy;
         dx = particle->x - x;
@@ -60,122 +61,118 @@ public:
     }
 };
 
+template<class T>
 class Column final 
 {
 private:
-    Particle *interior;
-    size_t amount;
+    std::vector<T*> interior;
 public:
     Column():
-        interior(new Particle [0]), amount(0) {}
-    ~Column() { delete [] interior; }
+        interior() {}
+    ~Column() {}
     void clear() 
     {
-        delete [] interior;
-        interior = new Particle [0];
-        amount = 0;
+        interior.clear();
     }
-    void push(Particle *particle) 
+    void push(T *particle) 
     {
-        Particle *temp = new Particle [amount];
-        for(int idx = 0; idx < amount; idx++) 
-        {
-            temp + idx = interior + idx;
-        }
-        temp + amount = particle;
-        delete [] interior;
-        interior = temp;
-        amount++;
+        interior.push_back(particle);
     } 
-    void colissions() 
+    void collisions(Column<T> *next) 
     {
-        for(int i = 0; i < amount; i++) 
+        for(int i = 0; i < interior.size(); i++) 
         {
-            for(int j = i + 1; j < amount; j++) 
+            for(int j = i + 1; j < interior.size(); j++) 
             {
-                if((interior + i)->intersect(interior + j)) 
-                {
-                    (interior + i)->collision(interior + j);
-                }
+                (interior[i])->collision(interior[j]); 
             }
-            for(int j = 0; j < (this + 1)->amount; j++) 
+            for(int j = 0; j < (next->interior).size(); j++) 
             {
-                if((interior + i)->intersect((this + 1)->interior + j)) 
-                {
-                    (interior + i)->collision((this + 1)->interior + j);
-                }
+                (interior[i])->collision((next->interior)[j]);
             }
         }
     }
 };
 
 template<typename T>
-void create_gas(Column *columns, Particle *particles) 
+void create_gas(std::vector<Column<Particle<T>>*> columns, std::vector<Particle<T>*> particles) 
 {
     T x, y, vx, vy;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dist(-INITIAL_VELOCITY, INITIAL_VELOCITY);
+    Column<Particle<T>> *column_pointer = nullptr;
+    Particle<T> *particle_pointer = nullptr;
     for(int i = 0; i < COLUMNS; i++) 
     {
-        columns + i = Column();
+        column_pointer = new Column<Particle<T>>();
+        columns.push_back(column_pointer);
     }
     for(int i = 0; i < WIDTH / 4; i++)
     {
         x = 2 + i * 4;
-        for(int j = 0; j < HEIGHT / 4; j++)
-        {
-            y = 2 + j * 4;
-            vx = dist(gen);
-            vy = pow(INITIAL_VELOCITY * INITIAL_VELOCITY - vx * vx, 0.5);
-            particles + idx = Particle(x, y, vx, vy);
-        }
+    for(int j = 0; j < HEIGHT / 4; j++)
+    {
+        y = 2 + j * 4;
+        vx = dist(gen);
+        vy = pow(INITIAL_VELOCITY * INITIAL_VELOCITY - vx * vx, 0.5);
+        particle_pointer = new Particle<T>(x, y, vx, vy);
+        particles.push_back(particle_pointer);
     }
+}
 
 }
 
 template<typename T>
-void iteration(Column *columns, Particle *particles) 
+void iteration(std::vector<Column<Particle<T>>*> columns, std::vector<Particle<T>*> particles) 
 {
     for(int i = 0; i < AMOUNT; i++)
     {
-        (columns + (particles + i)->x / (2 * RADIUS))->push(particles + i);
-        (particles + i)->wall();
+        (columns[static_cast<int>((particles[i])->get_x()) / (2 * RADIUS)])->push(particles[i]);
+        (particles[i])->wall();
     }
     for(int i = 0; i < COLUMNS; i++) 
     {
-        (columns + i)->collisions();
-        (columns + i)->clear();
+        (columns[i])->collisions(columns[i + 1]);
+        (columns[i])->clear();
     }
     for (int i = 0; i < AMOUNT; i++) {
-        (particles + i)->motion();
+        (particles[i])->motion();
     }
 }
 
 template<typename T>
-void run_simulation(Column *columns, Particle *particles, T period)
+void run_simulation(T period)
 {
+    std::vector<Column<Particle<T>>*> columns;
+    std::vector<Particle<T>*> particles;
     create_gas<T>(columns, particles);
-    for(time = 0; time < period; time += DELTA)
+    for(T time = 0; time < period; time += DELTA)
     {
         iteration<T>(columns, particles);
     }
     T v, sum = 0;
     for(int i = 0; i < AMOUNT; i++)
     {
-        v = pow((particles + i)->get_vx(), 2) +
-            pow((particles + i)->get_vy(), 2);
+        v = pow((particles[i])->get_vx(), 2) +
+            pow((particles[i])->get_vy(), 2);
         std::cout << pow(v, 0.5) << std::endl;
         sum += v;
     }
     std::cout << "Mean: " << sum / AMOUNT << std::endl;
+    for(int i = 0; i < COLUMNS; i++)
+    {
+        delete columns[i];
+    }
+    for(int i = 0; i < AMOUNT; i++)
+    {
+        delete particles[i];
+    }
 }
 
 // ......main......
 int main() {
-    Column *columns = new Column [COLUMNS];
-    Particle *particles = new Particle [AMOUNT];
-    run_simulation<float>(columns, particles);
+    run_simulation<float>(5);
     return 0;
 }
 
