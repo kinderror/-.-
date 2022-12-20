@@ -1,11 +1,12 @@
 #include <iostream>
+#include <fstream>
 #include <cmath>
 #include <random>
 #include <vector>
 
 // ......const values......
-static const float DELTA = 0.01;
-static const int WIDTH = 400, HEIGHT = 40, RADIUS = 1, AMOUNT = 1000, COLUMNS = 200 + 1, INITIAL_VELOCITY = 1;
+static const float DELTA = 0.04;
+static const int WIDTH = 8000, HEIGHT = 200, RADIUS = 1, AMOUNT = 100000, COLUMNS = 4000 + 1, INITIAL_VELOCITY = 1; 
 
 // ......functions and structures......
 template<typename T>
@@ -26,7 +27,7 @@ public:
         {
             vx = -vx;
         }
-        if (y < RADIUS or y > WIDTH - RADIUS) 
+        if (y < RADIUS or y > HEIGHT - RADIUS) 
         {
             vy = -vy;
         }
@@ -95,7 +96,7 @@ public:
 };
 
 template<typename T>
-void create_gas(std::vector<Column<Particle<T>>*> columns, std::vector<Particle<T>*> particles) 
+void create_gas(std::vector<Column<Particle<T>>*> &columns, std::vector<Particle<T>*> &particles) 
 {
     T x, y, vx, vy;
     std::random_device rd;
@@ -124,7 +125,7 @@ void create_gas(std::vector<Column<Particle<T>>*> columns, std::vector<Particle<
 }
 
 template<typename T>
-void iteration(std::vector<Column<Particle<T>>*> columns, std::vector<Particle<T>*> particles) 
+void iteration(std::vector<Column<Particle<T>>*> &columns, std::vector<Particle<T>*> &particles) 
 {
     for(int i = 0; i < AMOUNT; i++)
     {
@@ -147,16 +148,28 @@ void run_simulation(T period)
     std::vector<Column<Particle<T>>*> columns;
     std::vector<Particle<T>*> particles;
     create_gas<T>(columns, particles);
+    std::ofstream distribution, random_walk;
+    distribution.open("distribution.txt");
+    random_walk.open("random_walk.txt");
     for(T time = 0; time < period; time += DELTA)
     {
+        std::cout << time << "\n";
+        random_walk 
+            << time << " "
+            << (particles[0])->get_x() << " "
+            << (particles[0])->get_y() << "\n";  
         iteration<T>(columns, particles);
     }
-    T v, sum = 0;
+    T v, sum = 0, x, y;
     for(int i = 0; i < AMOUNT; i++)
     {
         v = pow((particles[i])->get_vx(), 2) +
             pow((particles[i])->get_vy(), 2);
-        std::cout << pow(v, 0.5) << std::endl;
+        distribution << pow(v, 0.5) << "\n";
+        x = particles[i]->get_x();
+        y = particles[i]->get_y();
+        if(x < RADIUS or x > WIDTH - RADIUS) std::cout << x << "\n";
+        if(y < RADIUS or y > HEIGHT - RADIUS) std::cout << y << "\n";
         sum += v;
     }
     std::cout << "Mean: " << sum / AMOUNT << std::endl;
@@ -172,7 +185,7 @@ void run_simulation(T period)
 
 // ......main......
 int main() {
-    run_simulation<float>(5);
+    run_simulation<float>(200);
     return 0;
 }
 
