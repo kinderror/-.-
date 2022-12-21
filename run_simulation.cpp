@@ -1,5 +1,6 @@
 #include "Headers/run_simulation.h"
 
+// RUN SIMULATION
 void run_simulation()
 {
     std::vector<Column*> columns;
@@ -8,8 +9,8 @@ void run_simulation()
     create_gas(columns, particles);
 
     std::ofstream distribution, random_walk;
-    distribution.open("distribution.txt");
-    random_walk.open("random_walk.txt");
+    distribution.open("Data_Processing/distribution.txt");
+    random_walk.open("Data_Processing/random_walk.txt");
     
     for(float time = 0; time < DURATION; time += DELTA)
     {

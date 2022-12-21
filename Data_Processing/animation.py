@@ -5,13 +5,13 @@ from collections import deque
 
 data = np.loadtxt('random_walk.txt')
 
-dt = 0.01
+dt = 0.04
 t = data[:, 0]
 x = data[:, 1]
 y = data[:, 2]
 
 fig = plt.figure(figsize=(5, 4))
-ax = fig.add_subplot(autoscale_on=False, xlim=(0, 40), ylim=(0, 40))
+ax = fig.add_subplot(autoscale_on=False, xlim=(0, 100), ylim=(0, 100))
 ax.set_aspect('equal')
 ax.grid()
 
@@ -20,7 +20,6 @@ trace, = ax.plot([], [], '.-', lw=1, ms=2)
 time_template = 'time = %.1fs'
 time_text = ax.text(0.05, 0.9, '', transform=ax.transAxes)
 history_x, history_y = deque(maxlen=history_len), deque(maxlen=history_len)
-
 
 def animate(i):
     if i == 0:
@@ -37,4 +36,7 @@ def animate(i):
 
 ani = animation.FuncAnimation(
     fig, animate, len(data), interval=dt*100, blit=True)
+
+plt.xlabel('x')
+plt.ylabel('y')
 plt.show()
