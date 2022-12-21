@@ -13,12 +13,7 @@ set(PROGRAM_SRCS
 )
 
 include_directories(
-    Headers/CONSTANTS.h
-    Headers/Particle.h
-    Headers/Column.h
-    Headers/create_gas.h
-    Headers/iterate.h
-    Headers/run_simulation.h
+    Headers/
 )
 
 add_executable(maxwell ${PROGRAM_SRCS})
