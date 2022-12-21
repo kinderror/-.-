@@ -1,20 +1,20 @@
 #include "Headers/Particle.h"
 
 // CONSTRUCTOR
-Particle::Particle(float x = 0, float y = 0, float vx = 0, float vy = 0):
+Particle::Particle(float x, float y, float vx, float vy):
     x(x), y(y), vx(vx), vy(vy) {}
 
 // DESTRUCTOR
 Particle::~Particle() {}
 
 // RETURN PRIVATE PARAMETERS
-Particle::T get_x() const { return x; }
+float Particle::get_x() const { return x; }
 
-Particle::T get_y() const { return y; }
+float Particle::get_y() const { return y; }
 
-Particle::T get_vx() const { return vx; }
+float Particle::get_vx() const { return vx; }
 
-Particle::T get_vy() const { return vy; }
+float Particle::get_vy() const { return vy; }
 
 // MOTION METHODS
 void Particle::collide_with_wall() 

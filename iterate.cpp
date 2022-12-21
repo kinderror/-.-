@@ -10,7 +10,7 @@ void iterate(std::vector<Column*> &columns, std::vector<Particle*> &particles)
         (particles[i])->collide_with_wall();
     }
 
-    for(int i = 0; i < COLUMNS; i++) 
+    for(int i = 0; i < COLUMNS - 1; i++) 
     {
         (columns[i])->check_collisions(columns[i + 1]);
         (columns[i])->clear();

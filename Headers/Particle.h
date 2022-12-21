@@ -10,7 +10,7 @@ private:
     float x, y, vx, vy;
 public:
     Particle(float x = 0, float y = 0, float vx = 0, float vy = 0);
-    ~Particle() {}
+    ~Particle();
     float get_x() const;
     float get_y() const;
     float get_vx() const;
